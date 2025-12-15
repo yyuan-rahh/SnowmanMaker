@@ -504,13 +504,17 @@ function setupSnowballMechanic(scene, camera, shadowGenerator) {
             
             snowball.position.addInPlace(normalizedDirection.scale(moveDistance));
             
-            // Rolling rotation based on movement direction
-            const moveDir = direction.normalize();
-            const rotationSpeed = distance * 10;
+            // Accurate rolling rotation based on physics
+            // Formula: angle (radians) = distance / radius
+            const radius = snowball.scaling.x / 2;
+            const rotationAngle = moveDistance / radius;
             
-            // Rotate perpendicular to movement direction
+            // Rotate perpendicular to movement direction (right-hand rule)
+            const moveDir = normalizedDirection;
             const rotAxis = new BABYLON.Vector3(-moveDir.z, 0, moveDir.x);
-            snowball.rotate(rotAxis, rotationSpeed, BABYLON.Space.WORLD);
+            rotAxis.normalize();
+            
+            snowball.rotate(rotAxis, rotationAngle, BABYLON.Space.WORLD);
             
             // Paint grass trail at the bottom contact point of the sphere
             const bottomPoint = new BABYLON.Vector3(
@@ -573,41 +577,59 @@ function paintGrassTrail(position, snowballRadius) {
     const texX = Math.floor(normalizedX * textureSize);
     const texY = Math.floor((1.0 - normalizedZ) * textureSize);
     
-    // Calculate brush size based on snowball radius
-    // Convert world units to texture pixels
+    // Calculate brush size - smaller than the snowball (50% of radius)
     const worldToTexture = textureSize / groundSize;
-    const brushSize = snowballRadius * worldToTexture;
+    const brushRadius = (snowballRadius * 0.5) * worldToTexture;
     
-    // Remove snow to reveal grass underneath
     const ctx = gameState.dynamicTexture.getContext();
     
-    // Paint grass/dirt where snow is removed (matching the snowball's footprint)
-    const gradient = ctx.createRadialGradient(texX, texY, 0, texX, texY, brushSize);
-    gradient.addColorStop(0, '#8B7355'); // Brown/dead grass center
-    gradient.addColorStop(0.3, '#9A7B4F'); // Tan
-    gradient.addColorStop(0.6, '#7A9B3A'); // Green grass showing through
-    gradient.addColorStop(0.8, '#C8C8C8'); // Light gray (partial snow)
-    gradient.addColorStop(1, '#FAFAFA'); // White snow edge
+    // Use darken mode to show individual footprints while blending overlaps
+    ctx.globalCompositeOperation = 'darken';
+    
+    // Create circular footprint with distinct center and edge
+    const gradient = ctx.createRadialGradient(
+        texX, texY, 0,
+        texX, texY, brushRadius
+    );
+    
+    // Gradient with more defined footprint edges
+    gradient.addColorStop(0, '#6B5B45');      // Dark brown center
+    gradient.addColorStop(0.4, '#7A6A50');    // Brown
+    gradient.addColorStop(0.6, '#8B7A60');    // Medium brown
+    gradient.addColorStop(0.75, '#A89580');   // Light brown
+    gradient.addColorStop(0.88, '#C8B8A8');   // Tan
+    gradient.addColorStop(0.96, '#E0D8D0');   // Light edge
+    gradient.addColorStop(1, '#FAFAFA');      // Snow
     
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(texX, texY, brushSize, 0, Math.PI * 2);
+    ctx.arc(texX, texY, brushRadius, 0, Math.PI * 2);
     ctx.fill();
     
-    // Add detailed grass texture in the exposed area
-    const numGrassDetails = Math.floor(brushSize / 5);
+    // Add visible grass texture for footprint definition
+    const numGrassDetails = Math.floor(brushRadius / 6);
     for (let i = 0; i < numGrassDetails; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * brushSize * 0.5;
+        const distance = Math.random() * brushRadius * 0.5; // Cover more area
         const x = texX + Math.cos(angle) * distance;
         const y = texY + Math.sin(angle) * distance;
-        const size = Math.random() * 4 + 2;
+        const size = Math.random() * 2.5 + 1;
         
-        // Grass blade or dirt patch
-        const grassShade = Math.floor(Math.random() * 30);
-        ctx.fillStyle = `rgb(${122 + grassShade}, ${155 + grassShade}, ${58 + grassShade})`;
+        // More visible grass details
+        const grassShade = Math.floor(Math.random() * 25);
+        ctx.fillStyle = `rgba(${95 + grassShade}, ${125 + grassShade}, ${45 + grassShade}, 0.5)`;
         ctx.fillRect(x, y, size, size);
     }
+    
+    // Add a subtle ring to define the footprint edge
+    ctx.strokeStyle = 'rgba(107, 91, 69, 0.15)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(texX, texY, brushRadius * 0.85, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Reset composite operation
+    ctx.globalCompositeOperation = 'source-over';
     
     gameState.dynamicTexture.update();
 }
