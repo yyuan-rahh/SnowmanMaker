@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snow World - Build a Snowman</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+</head>
+<body>
+    <div id="instructions" class="overlay">
+        <div class="instruction-panel">
+            <h1>❄️ Snow World ❄️</h1>
+            <p><strong>Controls:</strong></p>
+            <ul>
+                <li><kbd>W A S D</kbd> - Move around</li>
+                <li><kbd>Left Click + Drag</kbd> - Roll a snowball (grows with distance!)</li>
+                <li><kbd>Right Click</kbd> - Levitate snowball, then click to drop</li>
+            </ul>
+            <p><strong>Goal:</strong> Roll 3 snowballs of different sizes and stack them to build a snowman!</p>
+            <button id="startBtn">Start Playing</button>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div id="snowballCounter">Snowballs: 0/3</div>
+        <div id="hint">Drag on the snow to roll a snowball!</div>
+    </div>
+
+    <button id="resetBtn" class="control-btn">Reset</button>
+
+    <canvas id="renderCanvas"></canvas>
+    <script src="game.js"></script>
+</body>
+</html>
+
