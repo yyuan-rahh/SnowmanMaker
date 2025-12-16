@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Snowman Game</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        #log {
+            background: white;
+            border: 2px solid #333;
+            padding: 15px;
+            white-space: pre-wrap;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Snowman Game - Debug Page</h1>
+    <div id="log"></div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            console.log(message);
+        }
+
+        // Capture console errors
+        window.onerror = function(msg, url, line, col, error) {
+            addLog(`ERROR: ${msg} at ${url}:${line}:${col}`, 'error');
+            if (error) addLog(`Stack: ${error.stack}`, 'error');
+            return false;
+        };
+
+        // Test 1: Check if Phaser CDN loads
+        addLog('Test 1: Loading Phaser from CDN...', 'info');
+        const phaserScript = document.createElement('script');
+        phaserScript.src = 'https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js';
+        phaserScript.onload = function() {
+            addLog('✓ Phaser loaded successfully', 'success');
+            addLog(`Phaser version: ${Phaser.VERSION}`, 'info');
+            
+            // Test 2: Try to load our main module
+            addLog('Test 2: Loading main.js module...', 'info');
+            import('./src/main.js')
+                .then(() => {
+                    addLog('✓ main.js loaded successfully', 'success');
+                    addLog('Game should be starting...', 'info');
+                })
+                .catch(error => {
+                    addLog(`✗ Failed to load main.js: ${error.message}`, 'error');
+                    addLog(`Stack: ${error.stack}`, 'error');
+                });
+        };
+        phaserScript.onerror = function() {
+            addLog('✗ Failed to load Phaser from CDN', 'error');
+        };
+        document.head.appendChild(phaserScript);
+    </script>
+</body>
+</html>
+

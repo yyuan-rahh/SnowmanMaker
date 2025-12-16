@@ -1,0 +1,150 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Indie Flower', cursive;
+    background: #F5F3E9;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+}
+
+#loading-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #D9D3C7;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.5s ease-out;
+}
+
+#loading-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#loading-screen h1 {
+    font-size: 48px;
+    color: #5A8A4B;
+    margin-bottom: 20px;
+    text-align: center;
+    padding: 0 20px;
+}
+
+#loading-screen p {
+    font-size: 24px;
+    color: #6B5346;
+}
+
+#ui-overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    pointer-events: none;
+}
+
+#inventory {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+    min-width: 200px;
+}
+
+#inventory h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #5A8A4B;
+}
+
+.item-count {
+    font-size: 18px;
+    margin: 8px 0;
+    color: #2C2C2C;
+}
+
+#controls {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+#snowball-indicator {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #4A7A3D;
+}
+
+#active-snowball {
+    font-size: 24px;
+    color: #E87722;
+}
+
+#size-indicator {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #2C2C2C;
+}
+
+.control-hint {
+    font-size: 14px;
+    color: #6B5346;
+    margin: 4px 0;
+}
+
+/* Win message */
+#win-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.95);
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    z-index: 200;
+    display: none;
+}
+
+#win-message.show {
+    display: block;
+}
+
+#win-message h1 {
+    font-size: 48px;
+    color: #5A8A4B;
+    margin-bottom: 20px;
+}
+
+#win-message p {
+    font-size: 24px;
+    color: #2C2C2C;
+}
+
+canvas {
+    display: block;
+    margin: 0 auto;
+}
+

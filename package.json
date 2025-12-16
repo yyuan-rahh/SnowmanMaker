@@ -1,0 +1,17 @@
+{
+  "name": "snowman-maker",
+  "version": "1.0.0",
+  "description": "A cozy isometric snowman building exploration game",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "keywords": ["game", "phaser", "snowman", "isometric"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "phaser": "^3.70.0"
+  }
+}
+

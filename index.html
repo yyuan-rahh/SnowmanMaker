@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Good Snowman Is Hard To Build</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui-overlay">
+            <div id="inventory">
+                <h2>Inventory</h2>
+                <div class="item-count">🥕 Carrots: <span id="carrot-count">0</span>/1</div>
+                <div class="item-count">🪵 Twigs: <span id="twig-count">0</span>/2</div>
+                <div class="item-count">⚫ Coal: <span id="coal-count">0</span>/8</div>
+                <div class="item-count">🎩 Hat: <span id="hat-count">0</span>/1</div>
+            </div>
+            <div id="controls">
+                <div id="snowball-indicator">Snowball <span id="active-snowball">1</span></div>
+                <div id="size-indicator">Size: <span id="snowball-size">1.0x</span></div>
+                <div class="control-hint">Press 1, 2, or 3 to switch snowballs</div>
+                <div class="control-hint">Arrow keys or WASD to move</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load Phaser first, then our game code -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script>
+        // Check Phaser loaded
+        console.log('Phaser loaded:', typeof Phaser !== 'undefined');
+        if (typeof Phaser === 'undefined') {
+            alert('Failed to load Phaser library. Check your internet connection.');
+        }
+    </script>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
+
