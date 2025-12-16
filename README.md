@@ -68,8 +68,3 @@ The game is a static web application - just serve the files with any HTTP server
 - Isometric 2.5D perspective
 - ES6 modules architecture
 - No build step required (uses CDN for Phaser)
-
-## Credits
-
-Inspired by "A Good Snowman Is Hard To Build" and designed for cozy winter gameplay.
-
