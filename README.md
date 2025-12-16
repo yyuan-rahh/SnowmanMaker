@@ -1,5 +1,4 @@
-# A Good Snowman Is Hard To Build
-
+# Snowman Building Game
 A cozy isometric snowman-building exploration game with hand-painted aesthetics.
 
 ## About
