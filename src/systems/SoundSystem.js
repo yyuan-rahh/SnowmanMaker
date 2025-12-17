@@ -262,6 +262,48 @@ export class SoundSystem {
     }
 
     /**
+     * Play celebration music (extended fanfare)
+     */
+    playCelebrationMusic() {
+        this.initAudioContext();
+        
+        const now = this.audioContext.currentTime;
+        
+        // Extended victory fanfare with multiple notes
+        const notes = [
+            { freq: 523.25, time: 0 },     // C5
+            { freq: 659.25, time: 0.1 },   // E5
+            { freq: 783.99, time: 0.2 },   // G5
+            { freq: 1046.50, time: 0.3 },  // C6
+            { freq: 1174.66, time: 0.5 },  // D6
+            { freq: 1318.51, time: 0.6 },  // E6
+            { freq: 1567.98, time: 0.7 },  // G6
+            { freq: 1046.50, time: 0.9 },  // C6
+            { freq: 1318.51, time: 1.0 },  // E6
+            { freq: 1567.98, time: 1.1 },  // G6
+            { freq: 2093.00, time: 1.2 }   // C7
+        ];
+        
+        notes.forEach(note => {
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(note.freq, now + note.time);
+            
+            gainNode.gain.setValueAtTime(0, now + note.time);
+            gainNode.gain.linearRampToValueAtTime(this.masterVolume * 0.3, now + note.time + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + note.time + 0.4);
+            
+            oscillator.start(now + note.time);
+            oscillator.stop(now + note.time + 0.4);
+        });
+    }
+
+    /**
      * Play Santa arrival sound (sleigh bells)
      */
     playSantaSound() {

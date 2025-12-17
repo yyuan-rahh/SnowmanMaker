@@ -194,6 +194,94 @@ export class ParticleEffects {
         
         updateSnowflakes();
     }
+
+    /**
+     * Create confetti rain effect for celebration
+     */
+    createConfetti(x, y) {
+        const colors = [
+            '#FF6B6B', // Red
+            '#4ECDC4', // Teal
+            '#45B7D1', // Blue
+            '#FFA07A', // Orange
+            '#98D8C8', // Mint
+            '#F7DC6F', // Yellow
+            '#BB8FCE', // Purple
+            '#85C1E2'  // Light Blue
+        ];
+        
+        const confettiParticles = [];
+        const numParticles = 150;
+        
+        for (let i = 0; i < numParticles; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 100 + Math.random() * 200;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed - 50; // Upward bias
+            
+            const size = 4 + Math.random() * 6;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            // Create confetti piece (rectangle or circle)
+            const shape = Math.random() > 0.5 ? 'rect' : 'circle';
+            let confetti;
+            
+            if (shape === 'rect') {
+                confetti = this.scene.add.rectangle(x, y, size, size * 1.5, color, 1);
+            } else {
+                confetti = this.scene.add.circle(x, y, size, color, 1);
+            }
+            
+            confetti.setDepth(10001); // Above everything
+            
+            // Random rotation
+            const rotationSpeed = (Math.random() - 0.5) * 0.1;
+            
+            confettiParticles.push({
+                sprite: confetti,
+                vx,
+                vy,
+                rotationSpeed,
+                life: 0,
+                maxLife: 3000 + Math.random() * 2000
+            });
+        }
+        
+        // Animate confetti
+        const updateConfetti = () => {
+            for (let i = confettiParticles.length - 1; i >= 0; i--) {
+                const p = confettiParticles[i];
+                p.life += 16;
+                
+                if (p.life >= p.maxLife) {
+                    p.sprite.destroy();
+                    confettiParticles.splice(i, 1);
+                    continue;
+                }
+                
+                // Update position
+                p.sprite.x += p.vx * 0.016;
+                p.sprite.y += p.vy * 0.016;
+                p.vy += 300 * 0.016; // Gravity
+                
+                // Rotate
+                p.sprite.rotation += p.rotationSpeed;
+                
+                // Fade out near end
+                const fadeStart = p.maxLife * 0.7;
+                if (p.life > fadeStart) {
+                    const alpha = 1 - ((p.life - fadeStart) / (p.maxLife - fadeStart));
+                    p.sprite.setAlpha(alpha);
+                }
+            }
+            
+            if (confettiParticles.length > 0) {
+                requestAnimationFrame(updateConfetti);
+            }
+        };
+        
+        updateConfetti();
+    }
 }
 
 export default ParticleEffects;

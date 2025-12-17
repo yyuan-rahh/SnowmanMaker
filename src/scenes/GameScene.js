@@ -15,6 +15,7 @@ import { ParticleEffects } from '../graphics/effects/ParticleEffects.js';
 import { DialogueSystem } from '../ui/DialogueSystem.js';
 import { SantaSprite } from '../graphics/sprites/SantaSprite.js';
 import { DogWalkerSprite } from '../graphics/sprites/DogWalkerSprite.js';
+import { SnowmanSprite } from '../graphics/sprites/SnowmanSprite.js';
 import { SoundSystem } from '../systems/SoundSystem.js';
 
 /**
@@ -99,6 +100,20 @@ export class GameScene extends Phaser.Scene {
                     }
                 });
             }
+            
+            // Add dog collision with obstacles (bushes, trees, etc.)
+            const dogArea = this.mapData?.specialAreas.find(area => area.type === 'dog');
+            if (dogArea && dogArea.sprite) {
+                // Collision with bushes
+                this.physics.add.collider(dogArea.sprite, this.mapGenerator.bushes);
+                
+                // Collision with trees and other obstacles
+                this.mapData.specialAreas.forEach(area => {
+                    if (area.sprite && area.sprite.body && (area.type === 'tree' || area.type === 'man')) {
+                        this.physics.add.collider(dogArea.sprite, area.sprite);
+                    }
+                });
+            }
         
         // Set first snowball as active
         this.activeSnowballIndex = 0;
@@ -166,6 +181,9 @@ export class GameScene extends Phaser.Scene {
         // Dog walker sprites
         const dogWalkerGen = new DogWalkerSprite(this);
         dogWalkerGen.generateAll();
+        
+        // Snowman sprite (will generate when needed)
+        this.snowmanSpriteGen = new SnowmanSprite(this);
         
         // Create simple white particle for collection effects
         const particleGraphics = this.add.graphics();
@@ -714,9 +732,112 @@ export class GameScene extends Phaser.Scene {
                     
                     // Stack the smaller one on top
                     this.stackSnowball(smaller, larger);
+                    
+                    // Check if we now have 3 snowballs combined
+                    this.checkForCompleteSnowman();
                 }
             }
         }
+    }
+    
+    /**
+     * Check if all 3 snowballs are combined and build snowman
+     */
+    checkForCompleteSnowman() {
+        // Find the base snowball (one that has others stacked on it, or the largest unstacked)
+        let baseSnowball = null;
+        let stackedCount = 0;
+        
+        // First, find snowballs that have others stacked on them
+        for (const snowball of this.snowballs) {
+            const hasStackedOnIt = this.snowballs.some(s => s.stackedOn === snowball);
+            if (hasStackedOnIt) {
+                baseSnowball = snowball;
+                stackedCount++;
+            }
+        }
+        
+        // Count total stacked snowballs
+        for (const snowball of this.snowballs) {
+            if (snowball.isStacked) {
+                stackedCount++;
+            }
+        }
+        
+        // If we have a base with 2 stacked on it, we have all 3 together!
+        if (baseSnowball && stackedCount === 2) {
+            // Check if all 3 are close together
+            const basePos = baseSnowball.getPosition();
+            let allClose = true;
+            
+            for (const snowball of this.snowballs) {
+                if (snowball !== baseSnowball) {
+                    const pos = snowball.getPosition();
+                    const distance = Phaser.Math.Distance.Between(basePos.x, basePos.y, pos.x, pos.y);
+                    const maxDistance = baseSnowball.radius + snowball.radius + 20; // Small tolerance
+                    
+                    if (distance > maxDistance) {
+                        allClose = false;
+                        break;
+                    }
+                }
+            }
+            
+            if (allClose) {
+                // All 3 snowballs are together! Build the snowman!
+                this.buildSnowman(baseSnowball);
+            }
+        }
+    }
+    
+    /**
+     * Build the complete snowman with all collected items
+     */
+    buildSnowman(baseSnowball) {
+        if (this.snowmanBuilt) return; // Only build once
+        this.snowmanBuilt = true;
+        
+        const basePos = baseSnowball.getPosition();
+        
+        // Generate snowman sprite
+        this.snowmanSpriteGen.generateSnowman(this.inventory);
+        
+        // Create snowman sprite at the base snowball position
+        const snowman = this.add.sprite(basePos.x, basePos.y - 100, 'snowman_complete');
+        snowman.setDepth(10000); // Above everything
+        snowman.setScale(1.5);
+        
+        // Hide all snowballs
+        this.snowballs.forEach(snowball => {
+            if (snowball.sprite) snowball.sprite.setVisible(false);
+            if (snowball.shadow) snowball.shadow.setVisible(false);
+        });
+        
+        // Play celebration music
+        this.soundSystem.playCelebrationMusic();
+        
+        // Create confetti effect
+        this.particleEffects.createConfetti(basePos.x, basePos.y - 100);
+        
+        // Show congratulations modal
+        this.showCongratulations();
+    }
+    
+    /**
+     * Show congratulations modal
+     */
+    showCongratulations() {
+        const modal = document.getElementById('congratulations-modal');
+        modal.classList.add('show');
+        
+        // Setup close button
+        const closeBtn = document.getElementById('close-congratulations');
+        const handleClose = () => {
+            modal.classList.remove('show');
+            closeBtn.removeEventListener('click', handleClose);
+        };
+        
+        closeBtn.addEventListener('click', handleClose);
     }
 
     /**

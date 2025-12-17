@@ -162,9 +162,9 @@ export class RoadSystem {
         const car = this.scene.physics.add.sprite(startPoint.x, startPoint.y, carType);
         car.setDepth(startPoint.y * 10 + 5); // Above road, dynamic based on position
         
-        // Set up car physics (2x larger body)
-        car.body.setSize(120, 60);
-        car.body.setOffset(20, 20);
+        // Set up car physics (smaller collision box for more forgiving gameplay)
+        car.body.setSize(90, 50);
+        car.body.setOffset(35, 25);
         
         // Car data
         car.pathIndex = 0;
