@@ -148,3 +148,192 @@ canvas {
     margin: 0 auto;
 }
 
+/* Help Button */
+.help-button {
+    margin-top: 15px;
+    padding: 12px 20px;
+    font-family: 'Indie Flower', cursive;
+    font-size: 18px;
+    background: #E87722;
+    color: white;
+    border: 3px solid #2C2C2C;
+    border-radius: 10px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.2s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.help-button:hover {
+    background: #FF9944;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.help-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Santa Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    max-width: 400px;
+    border: 4px solid #E87722;
+}
+
+.modal-content h2 {
+    font-size: 36px;
+    color: #E87722;
+    margin-bottom: 20px;
+}
+
+.modal-content p {
+    font-size: 24px;
+    color: #2C2C2C;
+    margin-bottom: 30px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.modal-btn {
+    padding: 15px 30px;
+    font-family: 'Indie Flower', cursive;
+    font-size: 20px;
+    border: 3px solid #2C2C2C;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.yes-btn {
+    background: #5A8A4B;
+    color: white;
+}
+
+.yes-btn:hover {
+    background: #6B9A5C;
+    transform: translateY(-2px);
+}
+
+.no-btn {
+    background: #D9D3C7;
+    color: #2C2C2C;
+}
+
+.no-btn:hover {
+    background: #C9C3B7;
+    transform: translateY(-2px);
+}
+
+/* Zoom Controls */
+#zoom-controls {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.zoom-btn {
+    padding: 10px 15px;
+    font-family: 'Indie Flower', cursive;
+    font-size: 20px;
+    background: #5A8A4B;
+    color: white;
+    border: 3px solid #2C2C2C;
+    border-radius: 8px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.2s;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    min-width: 50px;
+}
+
+.zoom-btn:hover {
+    background: #6B9A5C;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.zoom-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Reset Button */
+.reset-button {
+    margin-top: 15px;
+    padding: 12px 20px;
+    font-family: 'Indie Flower', cursive;
+    font-size: 18px;
+    background: #DC143C;
+    color: white;
+    border: 3px solid #2C2C2C;
+    border-radius: 10px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.2s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.reset-button:hover {
+    background: #FF1744;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.reset-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Game Over Modal */
+.gameover-content {
+    border: 4px solid #DC143C;
+}
+
+.gameover-content h2 {
+    color: #DC143C;
+}
+
+.game-tip {
+    font-size: 18px;
+    color: #6B5346;
+    margin-top: 10px;
+}
+
+.restart-btn {
+    background: #E87722;
+    color: white;
+}
+
+.restart-btn:hover {
+    background: #FF9944;
+    transform: translateY(-2px);
+}
+

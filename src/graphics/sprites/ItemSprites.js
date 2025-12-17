@@ -10,51 +10,84 @@ export class ItemSprites extends SpriteRenderer {
     }
 
     /**
-     * Generate carrot sprite
+     * Generate carrot sprite (inverted triangle with green leaves on top)
      */
     generateCarrot() {
         const key = 'item_carrot';
-        const size = 40;
+        const size = 45;
 
-        return this.createTexture(key, size, size + 10, (ctx, w, h) => {
+        return this.createTexture(key, size, size + 15, (ctx, w, h) => {
             const centerX = w / 2;
             const baseY = h - 5;
 
             // Shadow
             this.drawSoftShadow(ctx, centerX, baseY, 20, 8, 0.2);
 
-            // Carrot body (triangular with curve)
+            // Green leaves at the top (bushy cluster)
+            ctx.fillStyle = PALETTE.carrotGreenHex;
+            
+            // Multiple leaf shapes
+            for (let i = 0; i < 5; i++) {
+                const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+                const leafX = centerX + Math.cos(angle) * 8;
+                const leafY = h - 35 + Math.sin(angle) * 6;
+                
+                // Leaf shape (elongated oval)
+                ctx.save();
+                ctx.translate(leafX, leafY);
+                ctx.rotate(angle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 10, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Leaf vein
+                ctx.strokeStyle = 'rgba(0, 100, 0, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(centerX, h - 35);
+                ctx.lineTo(leafX, leafY);
+                ctx.stroke();
+            }
+
+            // Central leaf cluster
+            ctx.fillStyle = PALETTE.carrotGreenHex;
+            ctx.beginPath();
+            ctx.arc(centerX, h - 35, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inverted triangle carrot body (wide at top, point at bottom)
             ctx.fillStyle = PALETTE.carrotOrangeHex;
             ctx.beginPath();
-            ctx.moveTo(centerX, baseY - 25);  // Top
-            ctx.quadraticCurveTo(centerX + 8, baseY - 12, centerX + 6, baseY);  // Right
-            ctx.lineTo(centerX - 6, baseY);  // Bottom
-            ctx.quadraticCurveTo(centerX - 8, baseY - 12, centerX, baseY - 25);  // Left
+            ctx.moveTo(centerX - 12, h - 35);  // Top-left (wide part)
+            ctx.lineTo(centerX + 12, h - 35);  // Top-right (wide part)
+            ctx.lineTo(centerX, baseY - 2);    // Bottom point
             ctx.closePath();
             ctx.fill();
 
-            // Carrot lines/texture
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+            // Carrot texture lines (horizontal)
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
             ctx.lineWidth = 1;
-            for (let i = 0; i < 4; i++) {
-                const y = baseY - 5 - i * 5;
+            for (let i = 0; i < 5; i++) {
+                const y = h - 32 + i * 5;
+                const width = 12 - (i * 2.4); // Gets narrower toward bottom
                 ctx.beginPath();
-                ctx.moveTo(centerX - 4, y);
-                ctx.lineTo(centerX + 4, y);
+                ctx.moveTo(centerX - width, y);
+                ctx.lineTo(centerX + width, y);
                 ctx.stroke();
             }
 
-            // Green leafy top
-            ctx.fillStyle = PALETTE.carrotGreenHex;
-            for (let i = 0; i < 3; i++) {
-                const angle = (i / 3) * Math.PI - Math.PI / 2;
-                const leafLength = 8 + Math.random() * 4;
-                ctx.beginPath();
-                ctx.moveTo(centerX, baseY - 24);
-                ctx.lineTo(centerX + Math.cos(angle) * leafLength, baseY - 24 - Math.sin(angle) * leafLength);
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
+            // Highlight on carrot
+            const gradient = ctx.createLinearGradient(centerX - 8, h - 35, centerX - 2, h - 35);
+            gradient.addColorStop(0, 'rgba(255, 200, 100, 0.4)');
+            gradient.addColorStop(1, 'rgba(255, 200, 100, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 10, h - 35);
+            ctx.lineTo(centerX - 5, h - 35);
+            ctx.lineTo(centerX - 3, baseY - 2);
+            ctx.closePath();
+            ctx.fill();
         });
     }
 

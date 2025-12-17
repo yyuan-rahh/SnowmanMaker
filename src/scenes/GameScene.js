@@ -4,13 +4,16 @@ import { TerrainRenderer } from '../graphics/TerrainRenderer.js';
 import { SnowballSprite } from '../graphics/sprites/SnowballSprite.js';
 import { GrassTrailSprite } from '../graphics/sprites/GrassTrailSprite.js';
 import { ItemSprites } from '../graphics/sprites/ItemSprites.js';
+import { CarSprite } from '../graphics/sprites/CarSprite.js';
 import { Snowball } from '../entities/Snowball.js';
 import { CollectibleItem } from '../entities/CollectibleItem.js';
 import { MapGenerator } from '../systems/MapGenerator.js';
 import { GrassTrailSystem } from '../systems/GrassTrailSystem.js';
+import { RoadSystem } from '../systems/RoadSystem.js';
 import { IsometricConverter } from '../systems/IsometricConverter.js';
 import { ParticleEffects } from '../graphics/effects/ParticleEffects.js';
 import { DialogueSystem } from '../ui/DialogueSystem.js';
+import { SantaSprite } from '../graphics/sprites/SantaSprite.js';
 
 /**
  * Main game scene
@@ -68,6 +71,12 @@ export class GameScene extends Phaser.Scene {
             this.items.push(item);
         });
         
+            // Initialize road system with traffic
+            console.log('Initializing road system...');
+            this.roadSystem = new RoadSystem(this);
+            this.roadSystem.initialize();
+            console.log('Road system initialized');
+        
             // Create 3 snowballs
             this.snowballs = [];
             for (let i = 0; i < 3; i++) {
@@ -104,8 +113,17 @@ export class GameScene extends Phaser.Scene {
             hat: 0
         };
         
-        this.updateUI();
-        
+            this.updateUI();
+            
+            // Setup Santa rescue button
+            this.setupSantaRescue();
+            
+            // Setup zoom controls
+            this.setupZoomControls();
+            
+            // Setup reset button
+            this.setupResetButton();
+            
             // Game created successfully
             console.log('GameScene created successfully!');
             
@@ -130,6 +148,14 @@ export class GameScene extends Phaser.Scene {
         // Item sprites
         const itemGen = new ItemSprites(this);
         itemGen.generateAll();
+        
+        // Car sprites
+        const carGen = new CarSprite(this);
+        carGen.generateAll();
+        
+        // Santa sprite
+        const santaGen = new SantaSprite(this);
+        santaGen.generate();
         
         // Create simple white particle for collection effects
         const particleGraphics = this.add.graphics();
@@ -197,10 +223,10 @@ export class GameScene extends Phaser.Scene {
      * Update loop
      */
     update(time, delta) {
-        // Update terrain rendering
-        const cam = this.cameras.main;
-        this.terrainGraphics.clear();
-        this.terrainRenderer.renderTerrain(this.terrainGraphics, cam.scrollX + cam.width/2, cam.scrollY + cam.height/2);
+        // Terrain rendering disabled (large green circles removed)
+        // const cam = this.cameras.main;
+        // this.terrainGraphics.clear();
+        // this.terrainRenderer.renderTerrain(this.terrainGraphics, cam.scrollX + cam.width/2, cam.scrollY + cam.height/2);
         
         // Update snowballs
         const activeSnowball = this.snowballs[this.activeSnowballIndex];
@@ -220,6 +246,14 @@ export class GameScene extends Phaser.Scene {
         
         // Update trail system
         this.trailSystem.update();
+        
+        // Update road system (cars)
+        if (this.roadSystem) {
+            this.roadSystem.update(delta);
+            
+            // Check collision between active snowball and cars
+            this.checkCarCollisions(activeSnowball);
+        }
         
         // Check proximity to man on bench for dialogue
         this.checkManDialogue(activeSnowball);
@@ -377,6 +411,210 @@ export class GameScene extends Phaser.Scene {
             // Store last dialogue time to prevent spamming
             this.lastDialogueTime = this.time.now;
         }
+    }
+
+    /**
+     * Check collision between snowball and cars
+     */
+    checkCarCollisions(snowball) {
+        if (this.gameIsOver) return; // Don't check if game is already over
+        
+        const cars = this.roadSystem.getCars();
+        const snowballPos = snowball.getPosition();
+        
+        for (const car of cars) {
+            const distance = Phaser.Math.Distance.Between(
+                snowballPos.x, snowballPos.y,
+                car.x, car.y
+            );
+            
+            // Check if snowball and car are touching (2x car size collision)
+            if (distance < snowball.radius + 60) { // 60 is approximate car radius for 2x size cars
+                this.gameOver();
+                break;
+            }
+        }
+    }
+
+    /**
+     * Handle game over (hit by car)
+     */
+    gameOver() {
+        if (this.gameIsOver) return;
+        
+        this.gameIsOver = true;
+        
+        // Pause physics
+        this.physics.pause();
+        
+        // Stop car spawning
+        if (this.roadSystem) {
+            this.roadSystem.destroy();
+        }
+        
+        // Show game over modal
+        const modal = document.getElementById('gameover-modal');
+        modal.classList.add('show');
+        
+        // Setup restart button
+        const restartBtn = document.getElementById('restart-after-gameover');
+        const handleRestart = () => {
+            modal.classList.remove('show');
+            restartBtn.removeEventListener('click', handleRestart);
+            this.gameIsOver = false;
+            this.scene.restart();
+        };
+        
+        restartBtn.addEventListener('click', handleRestart);
+    }
+
+    /**
+     * Setup reset button
+     */
+    setupResetButton() {
+        const resetBtn = document.getElementById('reset-button');
+        
+        resetBtn.addEventListener('click', () => {
+            // Confirm reset
+            if (confirm('Reset the entire game? All progress will be lost!')) {
+                // Restart the scene (resets everything)
+                this.scene.restart();
+            }
+        });
+    }
+
+    /**
+     * Setup zoom controls
+     */
+    setupZoomControls() {
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        
+        const minZoom = 0.5;
+        const maxZoom = 2.0;
+        const zoomStep = 0.2;
+        
+        // Zoom in
+        zoomInBtn.addEventListener('click', () => {
+            const currentZoom = this.cameras.main.zoom;
+            const newZoom = Math.min(currentZoom + zoomStep, maxZoom);
+            
+            this.tweens.add({
+                targets: this.cameras.main,
+                zoom: newZoom,
+                duration: 300,
+                ease: 'Sine.easeInOut'
+            });
+        });
+        
+        // Zoom out
+        zoomOutBtn.addEventListener('click', () => {
+            const currentZoom = this.cameras.main.zoom;
+            const newZoom = Math.max(currentZoom - zoomStep, minZoom);
+            
+            this.tweens.add({
+                targets: this.cameras.main,
+                zoom: newZoom,
+                duration: 300,
+                ease: 'Sine.easeInOut'
+            });
+        });
+    }
+
+    /**
+     * Setup Santa rescue button and modal
+     */
+    setupSantaRescue() {
+        const helpButton = document.getElementById('help-button');
+        const modal = document.getElementById('santa-modal');
+        const yesButton = document.getElementById('santa-yes');
+        const noButton = document.getElementById('santa-no');
+
+        // Show modal when help button clicked
+        helpButton.addEventListener('click', () => {
+            modal.classList.add('show');
+        });
+
+        // Handle "Yes" response - Santa comes to help!
+        yesButton.addEventListener('click', () => {
+            modal.classList.remove('show');
+            this.summonSanta();
+        });
+
+        // Handle "No" response - Close modal, no help
+        noButton.addEventListener('click', () => {
+            modal.classList.remove('show');
+            // Maybe show a sad message
+            this.dialogueSystem.showDialogue(
+                this.cameras.main.scrollX + this.cameras.main.width / 2,
+                this.cameras.main.scrollY + 100,
+                "Santa says: Well, maybe next year! Keep trying!",
+                2500
+            );
+        });
+    }
+
+    /**
+     * Summon Santa to rescue the snowball
+     */
+    summonSanta() {
+        const activeSnowball = this.snowballs[this.activeSnowballIndex];
+        const snowballPos = activeSnowball.getPosition();
+
+        // Create Santa sprite off-screen (left side)
+        const startX = snowballPos.x - 800;
+        const startY = snowballPos.y - 200;
+        const santa = this.add.sprite(startX, startY, 'santa_sled');
+        santa.setScale(1.5);
+        santa.setDepth(10000);
+
+        // Animate Santa flying in
+        this.tweens.add({
+            targets: santa,
+            x: snowballPos.x,
+            y: snowballPos.y - 100,
+            duration: 2000,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                // Magic effect!
+                this.particleEffects.createSparkles(snowballPos.x, snowballPos.y, PALETTE.sparkleYellow);
+                
+                // Reset snowball size
+                activeSnowball.distanceTraveled = 0;
+                activeSnowball.scale = 1.0;
+                activeSnowball.radius = CONFIG.snowball.startRadius;
+                activeSnowball.sprite.setScale(1.0);
+                
+                // Update physics body
+                activeSnowball.sprite.body.setCircle(activeSnowball.radius);
+                activeSnowball.sprite.body.setOffset(
+                    (activeSnowball.sprite.width - activeSnowball.radius * 2) / 2,
+                    (activeSnowball.sprite.height - activeSnowball.radius * 2) / 2
+                );
+                
+                this.updateSizeDisplay(1.0);
+                
+                // Show thank you message
+                this.dialogueSystem.showDialogue(
+                    snowballPos.x,
+                    snowballPos.y - 150,
+                    "Ho ho ho! You're small again! Merry Christmas!",
+                    2500
+                );
+                
+                // Fly away
+                this.time.delayedCall(1000, () => {
+                    this.tweens.add({
+                        targets: santa,
+                        x: snowballPos.x + 800,
+                        y: snowballPos.y - 200,
+                        duration: 2000,
+                        ease: 'Sine.easeInOut',
+                        onComplete: () => santa.destroy()
+                    });
+                });
+            }
+        });
     }
 
     /**

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Good Snowman Is Hard To Build</title>
+    <title>Build a Snowman! 🎄 </title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
@@ -24,6 +24,38 @@
                 <div id="size-indicator">Size: <span id="snowball-size">1.0x</span></div>
                 <div class="control-hint">Press 1, 2, or 3 to switch snowballs</div>
                 <div class="control-hint">Arrow keys or WASD to move</div>
+            </div>
+            <button id="help-button" class="help-button">Help! I'm stuck!</button>
+            
+            <div id="zoom-controls">
+                <button id="zoom-in" class="zoom-btn" title="Zoom In">🔍+</button>
+                <button id="zoom-out" class="zoom-btn" title="Zoom Out">🔍−</button>
+            </div>
+            
+            <button id="reset-button" class="reset-button">🔄 Reset Game</button>
+        </div>
+        
+        <!-- Santa Modal -->
+        <div id="santa-modal" class="modal">
+            <div class="modal-content">
+                <h2>🎅 Santa Asks:</h2>
+                <p>Have you been a good kid this year?</p>
+                <div class="modal-buttons">
+                    <button id="santa-yes" class="modal-btn yes-btn">Yes! 🎄</button>
+                    <button id="santa-no" class="modal-btn no-btn">No... 😔</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Over Modal -->
+        <div id="gameover-modal" class="modal">
+            <div class="modal-content gameover-content">
+                <h2>💥 Game Over!</h2>
+                <p>You got hit by a car!</p>
+                <p class="game-tip">🚗 Watch out for traffic next time!</p>
+                <div class="modal-buttons">
+                    <button id="restart-after-gameover" class="modal-btn restart-btn">Try Again 🔄</button>
+                </div>
             </div>
         </div>
     </div>
