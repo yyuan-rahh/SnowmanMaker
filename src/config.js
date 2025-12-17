@@ -56,8 +56,19 @@ export const CONFIG = {
         spawnInterval: 50,  // ms
         lifetime: 2000,     // ms
         maxParticles: 100
+    },
+
+    // Snow floor texture (procedural, cached)
+    snowFloor: {
+        tileSize: 512,          // px; repeated across the whole world
+        baseGrid: 16,           // base noise grid resolution (higher = smaller features)
+        octaves: 4,             // multi-octave value noise
+        intensity: 0.05,        // 0..1 brightness variation strength
+        alpha: 0.55,            // 0..1 opacity of the whole snow floor layer
+        speckleDensity: 0.0015, // dots per pixel (approx)
+        driftBlobs: 0,          // soft “wind drift” ellipses (set 0 to remove big translucent blobs)
+        baseColorHex: '#E6DDD1' // texture tint (background color remains unchanged)
     }
 };
 
 export default CONFIG;
-

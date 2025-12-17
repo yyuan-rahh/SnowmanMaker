@@ -50,6 +50,16 @@ export class GameScene extends Phaser.Scene {
             this.dialogueSystem = new DialogueSystem(this);
             this.soundSystem = new SoundSystem(this);
             console.log('Systems initialized');
+
+            // Snow floor (procedural texture, repeated across full world)
+            const snowKey = this.terrainRenderer.createSnowTexture(
+                CONFIG.snowFloor.tileSize,
+                CONFIG.snowFloor
+            );
+            this.snowFloor = this.add.tileSprite(-3000, -3000, 6000, 6000, snowKey);
+            this.snowFloor.setOrigin(0, 0);
+            this.snowFloor.setAlpha(CONFIG.snowFloor.alpha ?? 1);
+            this.snowFloor.setDepth(-20000); // Behind everything (trails are -9000)
             
             // Generate all sprite textures
             console.log('Generating sprites...');
@@ -221,6 +231,61 @@ export class GameScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-ONE', () => this.switchSnowball(0));
         this.input.keyboard.on('keydown-TWO', () => this.switchSnowball(1));
         this.input.keyboard.on('keydown-THREE', () => this.switchSnowball(2));
+        
+        // Debug: Press 'T' to test snowman build (bypasses gameplay)
+        this.input.keyboard.on('keydown-T', () => this.debugBuildSnowman());
+    }
+    
+    /**
+     * Debug function to instantly test snowman building
+     * Press 'T' key to trigger
+     */
+    debugBuildSnowman() {
+        if (this.snowmanBuilt) {
+            console.log('Snowman already built!');
+            return;
+        }
+        
+        console.log('🧪 DEBUG: Building snowman...');
+        
+        // Set all inventory items to required amounts
+        this.inventory = {
+            carrot: CONFIG.itemsNeeded.carrot,
+            twig: CONFIG.itemsNeeded.twig,
+            coal: CONFIG.itemsNeeded.coal,
+            hat: CONFIG.itemsNeeded.hat,
+            scarf: CONFIG.itemsNeeded.scarf
+        };
+        this.updateUI();
+        
+        // Get the active snowball position
+        const activeSnowball = this.snowballs[this.activeSnowballIndex];
+        const basePos = activeSnowball.getPosition();
+        
+        // Position all 3 snowballs together at the active snowball's location
+        this.snowballs.forEach((snowball, index) => {
+            const pos = snowball.getPosition();
+            
+            // Move all snowballs to the same X position, slightly offset Y for stacking
+            snowball.sprite.x = basePos.x;
+            snowball.sprite.y = basePos.y - (index * 5); // Small offset so they're close
+            
+            // Mark as stacked (simulate the stacking state)
+            if (index > 0) {
+                snowball.isStacked = true;
+                snowball.stackedOn = this.snowballs[index - 1];
+            }
+            
+            // Disable physics temporarily
+            if (snowball.sprite.body) {
+                snowball.sprite.body.setVelocity(0, 0);
+            }
+        });
+        
+        // Now trigger the build
+        this.buildSnowman(activeSnowball);
+        
+        console.log('✅ DEBUG: Snowman build triggered!');
     }
 
     /**
@@ -797,30 +862,162 @@ export class GameScene extends Phaser.Scene {
         if (this.snowmanBuilt) return; // Only build once
         this.snowmanBuilt = true;
         
-        const basePos = baseSnowball.getPosition();
+        // Sort by radius so the smallest is always the head (top) and largest is base (bottom)
+        const sortedSnowballs = [...this.snowballs].sort((a, b) => a.radius - b.radius); // Ascending: smallest first
+        const topSnowball = sortedSnowballs[0];     // SMALLEST  - HEAD
+        const middleSnowball = sortedSnowballs[1];  // MIDDLE    - MID
+        const bottomSnowball = sortedSnowballs[2];  // LARGEST   - BASE
         
-        // Generate snowman sprite
-        this.snowmanSpriteGen.generateSnowman(this.inventory);
+        // Anchor the stack on the largest (base) snowball's position
+        const basePos = bottomSnowball.getPosition();
         
-        // Create snowman sprite at the base snowball position
-        const snowman = this.add.sprite(basePos.x, basePos.y - 100, 'snowman_complete');
-        snowman.setDepth(10000); // Above everything
-        snowman.setScale(1.5);
+        // Get positions and sizes
+        const bottomPos = bottomSnowball.getPosition();
+        const bottomRadius = bottomSnowball.radius;
+        const middleRadius = middleSnowball.radius;
+        const topRadius = topSnowball.radius;
         
-        // Hide all snowballs
+        // Position snowballs stacked vertically with slight overlap (so they appear to sit into each other)
+        // In Phaser: Y increases downward, so smaller Y = higher on screen
+        // Bottom snowball stays where it is (largest Y, lowest on screen)
+        const bottomY = bottomPos.y;
+        
+        // Middle snowball sits on top of bottom (smaller Y, higher on screen)
+        // Overlap by ~30% so it appears to sit into the bottom snowball
+        const overlapBottomMiddle = middleRadius * 0.3;
+        const middleY = bottomY - bottomRadius - middleRadius + overlapBottomMiddle;
+        middleSnowball.sprite.x = bottomPos.x;
+        middleSnowball.sprite.y = middleY;
+        if (middleSnowball.shadow) {
+            middleSnowball.shadow.x = bottomPos.x;
+            middleSnowball.shadow.y = middleY;
+        }
+        
+        // Top snowball (head) sits on top of middle (smallest Y, highest on screen)
+        // Overlap by ~30% so it appears to sit into the middle snowball
+        const overlapMiddleTop = topRadius * 0.3;
+        const topY = middleY - middleRadius - topRadius + overlapMiddleTop;
+        topSnowball.sprite.x = bottomPos.x;
+        topSnowball.sprite.y = topY;
+        if (topSnowball.shadow) {
+            topSnowball.shadow.x = bottomPos.x;
+            topSnowball.shadow.y = topY;
+        }
+        
+        // Disable physics and movement for all snowballs
         this.snowballs.forEach(snowball => {
-            if (snowball.sprite) snowball.sprite.setVisible(false);
-            if (snowball.shadow) snowball.shadow.setVisible(false);
+            if (snowball.sprite.body) {
+                snowball.sprite.body.setVelocity(0, 0);
+                snowball.sprite.body.enable = false;
+            }
+            snowball.sprite.setRotation(0); // No rotation
+        });
+        
+        // Attach collected items to the snowman
+        const centerX = bottomPos.x;
+        
+        // === COAL EYES (on top snowball) ===
+        if (this.inventory.coal >= 2) {
+            const leftEye = this.add.sprite(centerX - 8, topY - 5, 'item_coal');
+            leftEye.setScale(0.4);
+            leftEye.setDepth(topY * 10 + 100);
+            
+            const rightEye = this.add.sprite(centerX + 8, topY - 5, 'item_coal');
+            rightEye.setScale(0.4);
+            rightEye.setDepth(topY * 10 + 100);
+        }
+        
+        // === CARROT NOSE (on top snowball, centered, slightly below eyes, pointing down) ===
+        if (this.inventory.carrot >= 1) {
+            const nose = this.add.sprite(centerX, topY + 2, 'item_carrot');
+            nose.setScale(0.5); // Smaller for snowman
+            nose.setDepth(topY * 10 + 100);
+            nose.setRotation(0.15); // Slight downward angle
+        }
+        
+        // === COAL SMILE (on top snowball) ===
+        if (this.inventory.coal >= 3) {
+            // Draw smile as small coal dots in an arc
+            const smileGraphics = this.add.graphics();
+            smileGraphics.fillStyle(0x2C2C2C, 1); // Coal black
+            for (let i = 0; i < 5; i++) {
+                const angle = 0.3 + (i / 4) * (Math.PI - 0.6);
+                const dotX = centerX + Math.cos(angle) * 8;
+                const dotY = topY + 3 + Math.sin(angle) * 8;
+                smileGraphics.fillCircle(dotX, dotY, 1.5);
+            }
+            smileGraphics.setDepth(topY * 10 + 100);
+        }
+        
+        // === COAL BUTTONS (on middle snowball) ===
+        if (this.inventory.coal >= 6) {
+            for (let i = 0; i < 3; i++) {
+                const button = this.add.sprite(centerX, middleY - 15 + i * 15, 'item_coal');
+                button.setScale(0.35);
+                button.setDepth(middleY * 10 + 100);
+            }
+        }
+        
+        // === TWIG ARMS (on middle snowball) ===
+        if (this.inventory.twig >= 2) {
+            // Left arm (pointing up-left)
+            const leftArm = this.add.sprite(centerX - middleRadius - 15, middleY - 20, 'item_twig');
+            leftArm.setScale(0.8);
+            leftArm.setDepth(middleY * 10 + 50);
+            leftArm.setRotation(-0.5);
+            
+            // Right arm (pointing up-right)
+            const rightArm = this.add.sprite(centerX + middleRadius + 15, middleY - 20, 'item_twig');
+            rightArm.setScale(0.8);
+            rightArm.setDepth(middleY * 10 + 50);
+            rightArm.setRotation(0.5);
+        }
+        
+        // === HAT (on top snowball, centered on top) ===
+        if (this.inventory.hat >= 1) {
+            const hat = this.add.sprite(centerX, topY - topRadius - 8, 'item_hat');
+            hat.setScale(0.75);
+            hat.setDepth(topY * 10 + 200);
+        }
+        
+        // === SCARF (at the join between top and middle snowballs - the "neck") ===
+        if (this.inventory.scarf >= 1) {
+            // Scarf should be at the join between top and middle snowballs
+            // This is approximately where the top snowball ends and middle begins
+            const scarfY = topY + topRadius - 3; // At the bottom of top snowball
+            const scarf = this.add.sprite(centerX, scarfY, 'item_scarf');
+            scarf.setScale(1.1);
+            scarf.setDepth(scarfY * 10 + 150);
+        }
+        
+        // === CELEBRATORY TEXT ===
+        const celebrationText = this.add.text(centerX, topY - topRadius - 80, 'You built the snowman! Yippeeee!', {
+            fontSize: '36px',
+            fontFamily: 'Indie Flower, cursive',
+            color: '#E87722',
+            stroke: '#FFFFFF',
+            strokeThickness: 6,
+            align: 'center',
+            fontWeight: 'bold'
+        });
+        celebrationText.setOrigin(0.5);
+        celebrationText.setDepth(20000); // Above everything
+        
+        // Animate text (bounce in)
+        this.tweens.add({
+            targets: celebrationText,
+            scale: { from: 0, to: 1 },
+            duration: 600,
+            ease: 'Back.easeOut'
         });
         
         // Play celebration music
         this.soundSystem.playCelebrationMusic();
         
         // Create confetti effect
-        this.particleEffects.createConfetti(basePos.x, basePos.y - 100);
+        this.particleEffects.createConfetti(centerX, topY - topRadius - 40);
         
-        // Show congratulations modal
-        this.showCongratulations();
+        // Note: Modal popup removed - only showing in-game celebratory text
     }
     
     /**
