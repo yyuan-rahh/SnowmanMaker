@@ -390,6 +390,12 @@ export class MapGenerator {
         dogWalker.hasScarf = true;
         dogWalker.animFrame = 0;
         dogWalker.walkSpeed = 30; // Slow walking speed
+        
+        // Walking back and forth bounds
+        dogWalker.walkMinY = -300; // Top boundary
+        dogWalker.walkMaxY = 400;  // Bottom boundary
+        dogWalker.walkDirection = -1; // Start walking up (north)
+        
         this.specialAreas.push({ type: 'dog_walker', x: dogWalkerX, y: dogWalkerY, sprite: dogWalker });
         
         // Dog next to walker

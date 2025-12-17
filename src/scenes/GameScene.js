@@ -15,6 +15,7 @@ import { ParticleEffects } from '../graphics/effects/ParticleEffects.js';
 import { DialogueSystem } from '../ui/DialogueSystem.js';
 import { SantaSprite } from '../graphics/sprites/SantaSprite.js';
 import { DogWalkerSprite } from '../graphics/sprites/DogWalkerSprite.js';
+import { SoundSystem } from '../systems/SoundSystem.js';
 
 /**
  * Main game scene
@@ -26,6 +27,8 @@ export class GameScene extends Phaser.Scene {
 
     create() {
         console.log('GameScene.create() started');
+        console.log('Scene is:', this);
+        console.log('Canvas exists:', !!this.sys.game.canvas);
         
         try {
             // Set world bounds
@@ -44,6 +47,7 @@ export class GameScene extends Phaser.Scene {
             this.mapGenerator = new MapGenerator(this);
             this.particleEffects = new ParticleEffects(this);
             this.dialogueSystem = new DialogueSystem(this);
+            this.soundSystem = new SoundSystem(this);
             console.log('Systems initialized');
             
             // Generate all sprite textures
@@ -261,6 +265,13 @@ export class GameScene extends Phaser.Scene {
             this.checkCarCollisions(activeSnowball);
         }
         
+        // Check snowfall timer (every 45 seconds)
+        if (!this.lastSnowfallTime) this.lastSnowfallTime = 0;
+        if (time - this.lastSnowfallTime > 45000) {
+            this.particleEffects.createSnowfall();
+            this.lastSnowfallTime = time;
+        }
+        
         // Check proximity to man on bench for dialogue
         this.checkManDialogue(activeSnowball);
         
@@ -283,6 +294,9 @@ export class GameScene extends Phaser.Scene {
                         
                         item.collect();
                         this.inventory[item.type]++;
+                        
+                        // Play collection sound
+                        this.soundSystem.playItemCollect();
                         
                         // If hat was collected, update man's status
                         if (item.type === 'hat') {
@@ -349,7 +363,8 @@ export class GameScene extends Phaser.Scene {
             this.inventory.carrot >= needed.carrot &&
             this.inventory.twig >= needed.twig &&
             this.inventory.coal >= needed.coal &&
-            this.inventory.hat >= needed.hat;
+            this.inventory.hat >= needed.hat &&
+            this.inventory.scarf >= needed.scarf;
         
         if (hasAll) {
             this.showWinMessage();
@@ -459,6 +474,10 @@ export class GameScene extends Phaser.Scene {
         if (this.gameIsOver) return;
         
         this.gameIsOver = true;
+        
+        // Play lose sound
+        this.soundSystem.playLoseSound();
+        this.soundSystem.playCarHonk();
         
         // Pause physics
         this.physics.pause();
@@ -577,6 +596,9 @@ export class GameScene extends Phaser.Scene {
         const activeSnowball = this.snowballs[this.activeSnowballIndex];
         const snowballPos = activeSnowball.getPosition();
 
+        // Play Santa arrival sound
+        this.soundSystem.playSantaSound();
+
         // Create Santa sprite off-screen (left side)
         const startX = snowballPos.x - 800;
         const startY = snowballPos.y - 200;
@@ -641,6 +663,9 @@ export class GameScene extends Phaser.Scene {
         if (this.collectionComplete) return; // Only show once
         this.collectionComplete = true;
         
+        // Play win sound
+        this.soundSystem.playWinSound();
+        
         const modal = document.getElementById('complete-modal');
         modal.classList.add('show');
         
@@ -700,6 +725,9 @@ export class GameScene extends Phaser.Scene {
     stackSnowball(smallerSnowball, largerSnowball) {
         smallerSnowball.isStacked = true;
         smallerSnowball.stackedOn = largerSnowball;
+        
+        // Play collision sound
+        this.soundSystem.playCollisionSound();
         
         // Disable physics for smaller snowball
         if (smallerSnowball.sprite.body) {
@@ -816,6 +844,9 @@ export class GameScene extends Phaser.Scene {
         this.updateUI();
         this.checkWinCondition();
         
+        // Play collection sound
+        this.soundSystem.playItemCollect();
+        
         // Show dialogue
         this.dialogueSystem.showDialogue(
             walker.x,
@@ -834,13 +865,15 @@ export class GameScene extends Phaser.Scene {
             this.time.delayedCall(4000, () => {
                 if (dogArea.sprite) {
                     dogArea.sprite.isChasing = true;
+                    // Play bark sound when chase starts
+                    this.soundSystem.playDogBark();
                 }
             });
         }
     }
 
     /**
-     * Animate dog walker walking
+     * Animate dog walker walking back and forth
      */
     animateDogWalker(time) {
         const dogWalkerArea = this.mapData?.specialAreas.find(area => area.type === 'dog_walker');
@@ -851,8 +884,17 @@ export class GameScene extends Phaser.Scene {
         
         // Only walk if dog is not chasing (stop when scarf is stolen)
         if (!dogArea?.sprite?.isChasing) {
-            // Walk up along the road (north direction) - direct position update for static body
-            walker.y -= walker.walkSpeed * (1/60); // Approximate delta for 60fps
+            // Walk back and forth - direct position update for static body
+            walker.y += walker.walkSpeed * (1/60) * walker.walkDirection; // Approximate delta for 60fps
+            
+            // Check boundaries and reverse direction
+            if (walker.y <= walker.walkMinY) {
+                walker.y = walker.walkMinY;
+                walker.walkDirection = 1; // Start walking down (south)
+            } else if (walker.y >= walker.walkMaxY) {
+                walker.y = walker.walkMaxY;
+                walker.walkDirection = -1; // Start walking up (north)
+            }
             
             // Update physics body position
             if (walker.body) {
@@ -863,18 +905,10 @@ export class GameScene extends Phaser.Scene {
             walker.setDepth(walker.y * 10 + 1);
             
             // Keep dog next to walker if not chasing
-            if (dogArea && dogArea.sprite) {
+            if (dogArea && dogArea.sprite && !dogArea.sprite.isChasing) {
                 dogArea.sprite.x = walker.x + 40;
                 dogArea.sprite.y = walker.y + 10;
                 dogArea.sprite.setDepth(dogArea.sprite.y * 10);
-            }
-            
-            // Reset if walker goes too far up
-            if (walker.y < -500) {
-                walker.y = 400;
-                if (walker.body) {
-                    walker.body.updateFromGameObject();
-                }
             }
         }
         
@@ -882,7 +916,15 @@ export class GameScene extends Phaser.Scene {
         if (!walker.lastAnimTime) walker.lastAnimTime = time;
         if (time - walker.lastAnimTime > 250) {
             walker.animFrame = walker.animFrame === 0 ? 1 : 0;
-            const texture = walker.animFrame === 0 ? 'person_with_scarf' : 'person_with_scarf_2';
+            
+            // Use correct texture based on whether scarf is still present
+            let texture;
+            if (walker.hasScarf) {
+                texture = walker.animFrame === 0 ? 'person_with_scarf' : 'person_with_scarf_2';
+            } else {
+                texture = walker.animFrame === 0 ? 'person_no_scarf' : 'person_no_scarf_2';
+            }
+            
             walker.setTexture(texture);
             walker.lastAnimTime = time;
         }
@@ -899,8 +941,48 @@ export class GameScene extends Phaser.Scene {
         const activeSnowball = this.snowballs[this.activeSnowballIndex];
         const snowballPos = activeSnowball.getPosition();
         
-        // Dog speed (80% of max snowball speed to make it catchable but dangerous)
-        const dogSpeed = 180;
+        // Check if all items are collected
+        const needed = CONFIG.itemsNeeded;
+        const allItemsCollected = 
+            this.inventory.carrot >= needed.carrot &&
+            this.inventory.twig >= needed.twig &&
+            this.inventory.coal >= needed.coal &&
+            this.inventory.hat >= needed.hat &&
+            this.inventory.scarf >= needed.scarf;
+        
+        if (allItemsCollected) {
+            // Passive following mode - dog follows slowly and happily
+            const distance = Phaser.Math.Distance.Between(dog.x, dog.y, snowballPos.x, snowballPos.y);
+            
+            // Follow at a distance, slower speed
+            if (distance > 150) {
+                const dogSpeed = 80; // Much slower, passive following
+                const angle = Phaser.Math.Angle.Between(dog.x, dog.y, snowballPos.x, snowballPos.y);
+                
+                dog.body.setVelocity(
+                    Math.cos(angle) * dogSpeed,
+                    Math.sin(angle) * dogSpeed
+                );
+            } else {
+                // Stay nearby, stop moving
+                dog.body.setVelocity(0, 0);
+            }
+            
+            dog.setDepth(dog.y * 10);
+            return; // Don't chase aggressively
+        }
+        
+        // Aggressive chase mode (original behavior)
+        // Periodic barking during chase (every 2 seconds)
+        if (!dog.lastBarkTime) dog.lastBarkTime = 0;
+        const timeSinceLastBark = this.time.now - dog.lastBarkTime;
+        if (timeSinceLastBark > 2000) {
+            this.soundSystem.playDogBark();
+            dog.lastBarkTime = this.time.now;
+        }
+        
+        // Dog speed (slower than snowball - snowball max is 150, so dog is slower)
+        const dogSpeed = 120;
         
         // Calculate direction to snowball
         const angle = Phaser.Math.Angle.Between(dog.x, dog.y, snowballPos.x, snowballPos.y);
@@ -928,6 +1010,10 @@ export class GameScene extends Phaser.Scene {
         if (this.gameIsOver) return;
         
         this.gameIsOver = true;
+        
+        // Play lose sound and final bark
+        this.soundSystem.playLoseSound();
+        this.soundSystem.playDogBark();
         
         // Pause physics
         this.physics.pause();

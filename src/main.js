@@ -23,7 +23,9 @@ const config = {
     scene: [GameScene],
     scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: CONFIG.width,
+        height: CONFIG.height
     }
 };
 

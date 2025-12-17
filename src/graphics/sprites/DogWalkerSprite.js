@@ -416,12 +416,98 @@ export class DogWalkerSprite extends SpriteRenderer {
     }
 
     /**
+     * Generate person WITHOUT scarf - Frame 2 (opposite leg forward)
+     */
+    generatePersonNoScarf2() {
+        const key = 'person_no_scarf_2';
+        const width = 50;
+        const height = 90;
+
+        return this.createTexture(key, width, height, (ctx, w, h) => {
+            const centerX = w / 2;
+            const baseY = h - 5;
+
+            // Shadow
+            this.drawSoftShadow(ctx, centerX, baseY, 40, 12, 0.2);
+
+            // Legs (walking position - opposite of frame 1)
+            ctx.fillStyle = PALETTE.clothingBrownHex;
+            // Back leg (right)
+            ctx.fillRect(centerX + 2, baseY - 30, 8, 30);
+            // Front leg (left)
+            ctx.fillRect(centerX - 8, baseY - 28, 8, 28);
+
+            // Shoes
+            ctx.fillStyle = PALETTE.coalBlackHex;
+            ctx.fillRect(centerX + 0, baseY - 5, 12, 5);
+            ctx.fillRect(centerX - 10, baseY - 3, 12, 3);
+
+            // Body (coat)
+            ctx.fillStyle = '#4A6FA5'; // Blue coat
+            ctx.beginPath();
+            ctx.ellipse(centerX, baseY - 40, 14, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Arms (opposite swing)
+            ctx.fillStyle = '#4A6FA5';
+            // Left arm (swinging back)
+            ctx.beginPath();
+            ctx.arc(centerX - 10, baseY - 40, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(centerX - 13, baseY - 40, 5, 15);
+            // Right arm (forward with leash)
+            ctx.beginPath();
+            ctx.arc(centerX + 10, baseY - 38, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(centerX + 9, baseY - 38, 5, 12);
+
+            // Head
+            ctx.fillStyle = PALETTE.skinBeigeHex;
+            ctx.beginPath();
+            ctx.arc(centerX, baseY - 58, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Simple face
+            // Eyes
+            ctx.fillStyle = PALETTE.coalBlackHex;
+            ctx.beginPath();
+            ctx.arc(centerX - 3, baseY - 60, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(centerX + 3, baseY - 60, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Frown (angry that scarf was stolen)
+            ctx.strokeStyle = PALETTE.coalBlackHex;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(centerX, baseY - 54, 5, Math.PI + 0.2, Math.PI * 2 - 0.2);
+            ctx.stroke();
+
+            // NO SCARF - it was stolen!
+
+            // Hair
+            ctx.fillStyle = '#6B5346';
+            ctx.beginPath();
+            ctx.arc(centerX - 7, baseY - 64, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(centerX + 7, baseY - 64, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(centerX, baseY - 67, 8, 0, Math.PI);
+            ctx.fill();
+        });
+    }
+
+    /**
      * Generate all dog walker sprites
      */
     generateAll() {
         this.generatePerson();
         this.generatePerson2();
         this.generatePersonNoScarf();
+        this.generatePersonNoScarf2();
         this.generateDog();
         this.generateLeash();
         this.generateScarf();

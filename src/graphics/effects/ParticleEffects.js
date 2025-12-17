@@ -127,6 +127,73 @@ export class ParticleEffects {
             onComplete: () => text.destroy()
         });
     }
+
+    /**
+     * Create snowfall effect across the visible screen
+     */
+    createSnowfall() {
+        const camera = this.scene.cameras.main;
+        const viewBounds = {
+            left: camera.scrollX - 200,
+            right: camera.scrollX + camera.width + 200,
+            top: camera.scrollY - 200,
+            bottom: camera.scrollY + camera.height + 200
+        };
+        
+        const snowflakes = [];
+        const numFlakes = 80; // Number of snowflakes
+        
+        // Create snowflakes
+        for (let i = 0; i < numFlakes; i++) {
+            const x = viewBounds.left + Math.random() * (viewBounds.right - viewBounds.left);
+            const y = viewBounds.top - Math.random() * 200; // Start above screen
+            const size = 2 + Math.random() * 4;
+            
+            const flake = this.scene.add.circle(x, y, size, PALETTE.white, 0.7 + Math.random() * 0.3);
+            flake.setDepth(9999); // Above most things but below UI
+            
+            const fallSpeed = 50 + Math.random() * 50;
+            const swaySpeed = 30 + Math.random() * 20;
+            const swayAmount = 20 + Math.random() * 30;
+            
+            snowflakes.push({
+                sprite: flake,
+                startX: x,
+                fallSpeed,
+                swaySpeed,
+                swayAmount,
+                swayOffset: Math.random() * Math.PI * 2,
+                life: 0
+            });
+        }
+        
+        // Animate snowflakes
+        const updateSnowflakes = () => {
+            for (let i = snowflakes.length - 1; i >= 0; i--) {
+                const flake = snowflakes[i];
+                flake.life += 16;
+                
+                // Fall down
+                flake.sprite.y += flake.fallSpeed * 0.016;
+                
+                // Sway side to side
+                const swayX = Math.sin((flake.life / 1000) * flake.swaySpeed + flake.swayOffset) * flake.swayAmount;
+                flake.sprite.x = flake.startX + swayX;
+                
+                // Remove if off screen or after 8 seconds
+                if (flake.sprite.y > viewBounds.bottom || flake.life > 8000) {
+                    flake.sprite.destroy();
+                    snowflakes.splice(i, 1);
+                }
+            }
+            
+            if (snowflakes.length > 0) {
+                requestAnimationFrame(updateSnowflakes);
+            }
+        };
+        
+        updateSnowflakes();
+    }
 }
 
 export default ParticleEffects;
