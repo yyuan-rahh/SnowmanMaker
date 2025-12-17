@@ -146,6 +146,10 @@ export class RoadSystem {
     }
 
     /**
+     * Spawn dog walker on the left side of the horseshoe
+     */
+
+    /**
      * Spawn a new car at the start of the road
      */
     spawnCar() {

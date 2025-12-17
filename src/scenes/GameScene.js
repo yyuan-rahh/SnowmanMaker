@@ -14,6 +14,7 @@ import { IsometricConverter } from '../systems/IsometricConverter.js';
 import { ParticleEffects } from '../graphics/effects/ParticleEffects.js';
 import { DialogueSystem } from '../ui/DialogueSystem.js';
 import { SantaSprite } from '../graphics/sprites/SantaSprite.js';
+import { DogWalkerSprite } from '../graphics/sprites/DogWalkerSprite.js';
 
 /**
  * Main game scene
@@ -110,7 +111,8 @@ export class GameScene extends Phaser.Scene {
             carrot: 0,
             twig: 0,
             coal: 0,
-            hat: 0
+            hat: 0,
+            scarf: 0
         };
         
             this.updateUI();
@@ -156,6 +158,10 @@ export class GameScene extends Phaser.Scene {
         // Santa sprite
         const santaGen = new SantaSprite(this);
         santaGen.generate();
+        
+        // Dog walker sprites
+        const dogWalkerGen = new DogWalkerSprite(this);
+        dogWalkerGen.generateAll();
         
         // Create simple white particle for collection effects
         const particleGraphics = this.add.graphics();
@@ -298,6 +304,21 @@ export class GameScene extends Phaser.Scene {
         
         // Update UI with current snowball size
         this.updateSizeDisplay(activeSnowball.getScale());
+        
+        // Check snowball collisions for stacking
+        this.checkSnowballCollisions();
+        
+        // Update positions of stacked snowballs
+        this.updateStackedSnowballs();
+        
+        // Check collision with dog walker for scarf stealing
+        this.checkDogWalkerCollision(activeSnowball);
+        
+        // Animate dog walker
+        this.animateDogWalker(time);
+        
+        // Update dog chase
+        this.updateDogChase(delta);
     }
 
     /**
@@ -308,6 +329,7 @@ export class GameScene extends Phaser.Scene {
         document.getElementById('twig-count').textContent = this.inventory.twig;
         document.getElementById('coal-count').textContent = this.inventory.coal;
         document.getElementById('hat-count').textContent = this.inventory.hat;
+        document.getElementById('scarf-count').textContent = this.inventory.scarf;
         document.getElementById('active-snowball').textContent = this.activeSnowballIndex + 1;
     }
 
@@ -365,7 +387,7 @@ export class GameScene extends Phaser.Scene {
             targets: warningText,
             y: y - 80,
             alpha: 0,
-            duration: 1500,
+            duration: 3000,
             ease: 'Cubic.easeOut',
             onComplete: () => warningText.destroy()
         });
@@ -414,22 +436,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Check collision between snowball and cars
+     * Check collision between snowball and cars (precise physics body overlap)
      */
     checkCarCollisions(snowball) {
         if (this.gameIsOver) return; // Don't check if game is already over
         
         const cars = this.roadSystem.getCars();
-        const snowballPos = snowball.getPosition();
         
         for (const car of cars) {
-            const distance = Phaser.Math.Distance.Between(
-                snowballPos.x, snowballPos.y,
-                car.x, car.y
-            );
-            
-            // Check if snowball and car are touching (2x car size collision)
-            if (distance < snowball.radius + 60) { // 60 is approximate car radius for 2x size cars
+            // Use Phaser's physics overlap detection for precise collision
+            if (this.physics.overlap(snowball.sprite, car)) {
                 this.gameOver();
                 break;
             }
@@ -621,16 +637,334 @@ export class GameScene extends Phaser.Scene {
      * Show win message
      */
     showWinMessage() {
-        // Create win message overlay
-        const winDiv = document.createElement('div');
-        winDiv.id = 'win-message';
-        winDiv.className = 'show';
-        winDiv.innerHTML = `
-            <h1>A Good Snowman!</h1>
-            <p>You collected all the parts!</p>
-            <p>Refresh to play again</p>
-        `;
-        document.body.appendChild(winDiv);
+        // Show collection complete modal
+        if (this.collectionComplete) return; // Only show once
+        this.collectionComplete = true;
+        
+        const modal = document.getElementById('complete-modal');
+        modal.classList.add('show');
+        
+        // Setup close button
+        const closeBtn = document.getElementById('close-complete');
+        const handleClose = () => {
+            modal.classList.remove('show');
+            closeBtn.removeEventListener('click', handleClose);
+        };
+        
+        closeBtn.addEventListener('click', handleClose);
+    }
+
+    /**
+     * Check collisions between snowballs and handle stacking
+     */
+    checkSnowballCollisions() {
+        // Check each pair of snowballs
+        for (let i = 0; i < this.snowballs.length; i++) {
+            for (let j = i + 1; j < this.snowballs.length; j++) {
+                const snowball1 = this.snowballs[i];
+                const snowball2 = this.snowballs[j];
+                
+                // Skip if either is already stacked
+                if (snowball1.isStacked || snowball2.isStacked) continue;
+                
+                const pos1 = snowball1.getPosition();
+                const pos2 = snowball2.getPosition();
+                const distance = Phaser.Math.Distance.Between(pos1.x, pos1.y, pos2.x, pos2.y);
+                const minDistance = snowball1.radius + snowball2.radius;
+                
+                // Check if snowballs are touching
+                if (distance < minDistance) {
+                    // Determine which is smaller
+                    const scale1 = snowball1.getScale();
+                    const scale2 = snowball2.getScale();
+                    
+                    let smaller, larger;
+                    if (scale1 < scale2) {
+                        smaller = snowball1;
+                        larger = snowball2;
+                    } else {
+                        smaller = snowball2;
+                        larger = snowball1;
+                    }
+                    
+                    // Stack the smaller one on top
+                    this.stackSnowball(smaller, larger);
+                }
+            }
+        }
+    }
+
+    /**
+     * Stack one snowball on top of another
+     */
+    stackSnowball(smallerSnowball, largerSnowball) {
+        smallerSnowball.isStacked = true;
+        smallerSnowball.stackedOn = largerSnowball;
+        
+        // Disable physics for smaller snowball
+        if (smallerSnowball.sprite.body) {
+            smallerSnowball.sprite.body.setVelocity(0, 0);
+            smallerSnowball.sprite.body.enable = false;
+        }
+        
+        // Position smaller on top of larger
+        const largerPos = largerSnowball.getPosition();
+        const offsetY = -(largerSnowball.radius + smallerSnowball.radius * 0.7);
+        
+        smallerSnowball.sprite.x = largerPos.x;
+        smallerSnowball.sprite.y = largerPos.y + offsetY;
+        
+        // Update shadow position
+        if (smallerSnowball.shadow) {
+            smallerSnowball.shadow.x = largerPos.x;
+            smallerSnowball.shadow.y = largerPos.y + offsetY;
+        }
+        
+        // Increase depth so it appears on top
+        smallerSnowball.sprite.setDepth(largerSnowball.sprite.depth + 100);
+        
+        // Switch to the larger snowball if smaller was active
+        if (smallerSnowball.isActive) {
+            const largerIndex = this.snowballs.indexOf(largerSnowball);
+            this.switchSnowball(largerIndex);
+        }
+    }
+    
+    /**
+     * Update stacked snowball positions
+     */
+    updateStackedSnowballs() {
+        this.snowballs.forEach(snowball => {
+            if (snowball.isStacked && snowball.stackedOn) {
+                const largerPos = snowball.stackedOn.getPosition();
+                const offsetY = -(snowball.stackedOn.radius + snowball.radius * 0.7);
+                
+                snowball.sprite.x = largerPos.x;
+                snowball.sprite.y = largerPos.y + offsetY;
+                
+                if (snowball.shadow) {
+                    snowball.shadow.x = largerPos.x;
+                    snowball.shadow.y = largerPos.y + offsetY;
+                }
+            }
+        });
+    }
+
+    /**
+     * Check collision between snowball and dog walker for scarf stealing
+     */
+    checkDogWalkerCollision(snowball) {
+        const dogWalkerArea = this.mapData?.specialAreas.find(area => area.type === 'dog_walker');
+        if (!dogWalkerArea || !dogWalkerArea.sprite || !dogWalkerArea.sprite.hasScarf) return;
+        
+        const walker = dogWalkerArea.sprite;
+        const snowballPos = snowball.getPosition();
+        const distance = Phaser.Math.Distance.Between(
+            snowballPos.x, snowballPos.y,
+            walker.x, walker.y
+        );
+        
+        // Check if snowball is touching dog walker
+        if (distance < snowball.radius + 30) {
+            const snowballScale = snowball.getScale();
+            const requiredSize = CONFIG.itemRequirements.scarf;
+            
+            if (snowballScale >= requiredSize) {
+                // Steal the scarf!
+                this.stealScarf(walker);
+            } else {
+                // Show "too small" message
+                if (!walker.lastWarningTime) walker.lastWarningTime = 0;
+                const timeSinceLastWarning = this.time.now - walker.lastWarningTime;
+                
+                if (timeSinceLastWarning > 2000) {
+                    const warningText = this.add.text(walker.x, walker.y - 80, 'Too small! Come back when bigger', {
+                        fontSize: '18px',
+                        fontFamily: 'Indie Flower, cursive',
+                        color: '#E87722',
+                        stroke: '#000000',
+                        strokeThickness: 3,
+                        align: 'center'
+                    }).setOrigin(0.5);
+                    
+                    this.tweens.add({
+                        targets: warningText,
+                        y: walker.y - 120,
+                        alpha: 0,
+                        duration: 2000,
+                        onComplete: () => warningText.destroy()
+                    });
+                    
+                    walker.lastWarningTime = this.time.now;
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle stealing the scarf from dog walker
+     */
+    stealScarf(walker) {
+        // Mark scarf as taken
+        walker.hasScarf = false;
+        
+        // Change sprite to version without scarf
+        walker.setTexture('person_no_scarf');
+        
+        // Add to inventory
+        this.inventory.scarf++;
+        this.updateUI();
+        this.checkWinCondition();
+        
+        // Show dialogue
+        this.dialogueSystem.showDialogue(
+            walker.x,
+            walker.y,
+            "Hey! Give me my scarf back!",
+            3000
+        );
+        
+        // Particle effects
+        this.particleEffects.createSparkles(walker.x, walker.y - 50);
+        this.particleEffects.createPoof(walker.x, walker.y - 50);
+        
+        // After 4 seconds, start dog chase
+        const dogArea = this.mapData?.specialAreas.find(area => area.type === 'dog');
+        if (dogArea && dogArea.sprite) {
+            this.time.delayedCall(4000, () => {
+                if (dogArea.sprite) {
+                    dogArea.sprite.isChasing = true;
+                }
+            });
+        }
+    }
+
+    /**
+     * Animate dog walker walking
+     */
+    animateDogWalker(time) {
+        const dogWalkerArea = this.mapData?.specialAreas.find(area => area.type === 'dog_walker');
+        const dogArea = this.mapData?.specialAreas.find(area => area.type === 'dog');
+        if (!dogWalkerArea || !dogWalkerArea.sprite) return;
+        
+        const walker = dogWalkerArea.sprite;
+        
+        // Only walk if dog is not chasing (stop when scarf is stolen)
+        if (!dogArea?.sprite?.isChasing) {
+            // Walk up along the road (north direction) - direct position update for static body
+            walker.y -= walker.walkSpeed * (1/60); // Approximate delta for 60fps
+            
+            // Update physics body position
+            if (walker.body) {
+                walker.body.updateFromGameObject();
+            }
+            
+            // Update depth
+            walker.setDepth(walker.y * 10 + 1);
+            
+            // Keep dog next to walker if not chasing
+            if (dogArea && dogArea.sprite) {
+                dogArea.sprite.x = walker.x + 40;
+                dogArea.sprite.y = walker.y + 10;
+                dogArea.sprite.setDepth(dogArea.sprite.y * 10);
+            }
+            
+            // Reset if walker goes too far up
+            if (walker.y < -500) {
+                walker.y = 400;
+                if (walker.body) {
+                    walker.body.updateFromGameObject();
+                }
+            }
+        }
+        
+        // Alternate between two walking frames every 250ms for smooth animation
+        if (!walker.lastAnimTime) walker.lastAnimTime = time;
+        if (time - walker.lastAnimTime > 250) {
+            walker.animFrame = walker.animFrame === 0 ? 1 : 0;
+            const texture = walker.animFrame === 0 ? 'person_with_scarf' : 'person_with_scarf_2';
+            walker.setTexture(texture);
+            walker.lastAnimTime = time;
+        }
+    }
+
+    /**
+     * Update dog chase behavior
+     */
+    updateDogChase(delta) {
+        const dogArea = this.mapData?.specialAreas.find(area => area.type === 'dog');
+        if (!dogArea || !dogArea.sprite || !dogArea.sprite.isChasing) return;
+        
+        const dog = dogArea.sprite;
+        const activeSnowball = this.snowballs[this.activeSnowballIndex];
+        const snowballPos = activeSnowball.getPosition();
+        
+        // Dog speed (80% of max snowball speed to make it catchable but dangerous)
+        const dogSpeed = 180;
+        
+        // Calculate direction to snowball
+        const angle = Phaser.Math.Angle.Between(dog.x, dog.y, snowballPos.x, snowballPos.y);
+        
+        // Move dog toward snowball
+        dog.body.setVelocity(
+            Math.cos(angle) * dogSpeed,
+            Math.sin(angle) * dogSpeed
+        );
+        
+        // Update dog depth
+        dog.setDepth(dog.y * 10);
+        
+        // Check if dog caught the snowball
+        const distance = Phaser.Math.Distance.Between(dog.x, dog.y, snowballPos.x, snowballPos.y);
+        if (distance < activeSnowball.radius + 20) {
+            this.dogCaughtSnowball();
+        }
+    }
+
+    /**
+     * Handle dog catching the snowball - game over
+     */
+    dogCaughtSnowball() {
+        if (this.gameIsOver) return;
+        
+        this.gameIsOver = true;
+        
+        // Pause physics
+        this.physics.pause();
+        
+        // Stop car spawning
+        if (this.roadSystem) {
+            this.roadSystem.destroy();
+        }
+        
+        // Show custom game over modal for dog
+        const modal = document.getElementById('gameover-modal');
+        const heading = modal.querySelector('h2');
+        const message = modal.querySelector('p');
+        const tip = modal.querySelector('.game-tip');
+        
+        heading.textContent = '🐕 Caught!';
+        message.textContent = 'The dog caught you!';
+        tip.textContent = "🐕 Don't steal scarves from dog walkers!";
+        
+        modal.classList.add('show');
+        
+        // Setup restart button
+        const restartBtn = document.getElementById('restart-after-gameover');
+        const handleRestart = () => {
+            modal.classList.remove('show');
+            restartBtn.removeEventListener('click', handleRestart);
+            
+            // Reset modal text for car game overs
+            heading.textContent = '💥 Game Over!';
+            message.textContent = 'You got hit by a car!';
+            tip.textContent = '🚗 Watch out for traffic next time!';
+            
+            this.gameIsOver = false;
+            this.scene.restart();
+        };
+        
+        restartBtn.addEventListener('click', handleRestart);
     }
 }
 

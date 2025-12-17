@@ -337,3 +337,18 @@ canvas {
     transform: translateY(-2px);
 }
 
+/* Collection Complete Modal */
+.complete-content {
+    border: 4px solid #5A8A4B;
+}
+
+.good-job-text {
+    color: #5A8A4B;
+    font-size: 48px;
+}
+
+.complete-content p {
+    font-size: 20px;
+    line-height: 1.6;
+}
+

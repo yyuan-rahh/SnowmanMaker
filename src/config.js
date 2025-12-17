@@ -32,7 +32,8 @@ export const CONFIG = {
         carrot: 1.0,
         twig: 1.0,
         coal: 1.5,
-        hat: 2.0
+        hat: 2.0,
+        scarf: 3.0  // Need to be really big to take the scarf!
     },
     
     // Items needed to complete game
@@ -40,7 +41,8 @@ export const CONFIG = {
         carrot: 1,  // nose
         twig: 2,    // arms
         coal: 8,    // 2 eyes + 6 buttons
-        hat: 1      // hat
+        hat: 1,     // hat
+        scarf: 1    // scarf
     },
     
     // Camera settings

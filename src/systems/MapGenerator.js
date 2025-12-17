@@ -59,6 +59,9 @@ export class MapGenerator {
         // Place all items in a central room
         this.placeCentralRoom();
         
+        // Place dog walker walking along the road
+        this.placeDogWalker();
+        
         // Determine snowball spawn points (one in each region)
         this.determineSnowballSpawns();
         
@@ -370,6 +373,36 @@ export class MapGenerator {
         });
     }
 
+
+    /**
+     * Place dog walker walking along the road
+     */
+    placeDogWalker() {
+        // Place dog walker on the left side of the road, walking along it
+        const dogWalkerX = -700; // Just left of the road's left vertical section
+        const dogWalkerY = 100;  // Mid-way along the left vertical section
+        
+        const dogWalker = this.scene.add.sprite(dogWalkerX, dogWalkerY, 'person_with_scarf');
+        dogWalker.setDepth(dogWalkerY * 10 + 1);
+        this.scene.physics.add.existing(dogWalker, true); // true = static body (can't be pushed)
+        dogWalker.body.setCircle(30); // Larger collision area for easier interaction
+        dogWalker.body.setOffset((dogWalker.width - 60) / 2, dogWalker.height - 60);
+        dogWalker.hasScarf = true;
+        dogWalker.animFrame = 0;
+        dogWalker.walkSpeed = 30; // Slow walking speed
+        this.specialAreas.push({ type: 'dog_walker', x: dogWalkerX, y: dogWalkerY, sprite: dogWalker });
+        
+        // Dog next to walker
+        const dog = this.scene.add.sprite(dogWalkerX + 40, dogWalkerY + 10, 'dog');
+        dog.setDepth(dogWalkerY * 10);
+        this.scene.physics.add.existing(dog);
+        dog.body.setCircle(15);
+        dog.body.setOffset((dog.width - 30) / 2, dog.height - 20);
+        dog.isChasing = false;
+        this.specialAreas.push({ type: 'dog', x: dogWalkerX + 40, y: dogWalkerY + 10, sprite: dog });
+        
+        // No floating scarf - it's on the dog walker's neck!
+    }
 
     /**
      * Determine spawn points for 3 snowballs in different areas
